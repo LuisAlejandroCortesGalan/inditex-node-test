@@ -1,5 +1,7 @@
 # Similar Products API
 
+[![CI](https://github.com/yourusername/similar-products-api/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/similar-products-api/actions/workflows/ci.yml)
+
 A RESTful API service to retrieve similar products based on a product ID.
 
 ## Project Overview
