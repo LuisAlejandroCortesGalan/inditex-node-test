@@ -2,9 +2,9 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-
-// Rutas - se importarán después
-// import productRoutes from './routes/productRoutes';
+import productRoutes from './routes/productRoutes';
+import { requestLogger, requestIdMiddleware } from './middleware/requestLogger';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 const app: Application = express();
 
@@ -13,9 +13,11 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(requestIdMiddleware);
+app.use(requestLogger);
 
-// Rutas - se implementarán después
-// app.use('/product', productRoutes);
+// Rutas
+app.use('/product', productRoutes);
 
 // Ruta básica de health check
 app.get('/health', (_req, res) => {
@@ -25,12 +27,10 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Manejador de rutas no encontradas - se implementará después
-app.use('*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Cannot find ${req.originalUrl} on this server!`,
-  });
-});
+// Manejador de rutas no encontradas
+app.use('*', notFoundHandler);
+
+// Manejador de errores
+app.use(errorHandler);
 
 export default app;

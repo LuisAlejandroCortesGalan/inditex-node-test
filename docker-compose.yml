@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  similar-products-api:
+    build: .
+    container_name: similar-products-api
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - EXTERNAL_API_BASE_URL=http://simulado:80
+      - REQUEST_TIMEOUT=3000
+      - MAX_RETRIES=3
+      - RETRY_DELAY=300
+      - CACHE_TTL=60000
+      - NODE_ENV=production
+    networks:
+      - backenddevtest_default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+networks:
+  backenddevtest_default:
+    external: true
