@@ -1,14 +1,26 @@
-import express from 'express';
+import app from './app';
+import config from './config/config';
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
-app.use(express.json());
-
-app.get('/', (_, res) => {
-  res.send('API Similar Products working 🚀');
+const server = app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
-app.listen(PORT, () => {
-  console.log(`server running on http://localhost:${PORT}`);
+// Manejador de errores no capturados
+process.on('uncaughtException', error => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(error);
+  process.exit(1);
 });
+
+// Manejador de rechazos no manejados
+process.on('unhandledRejection', error => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(error);
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+export default server;
