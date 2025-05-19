@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "description": "API para obtener productos similares",
   "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "lint": "eslint . --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "test": "jest",
-    "test:coverage": "jest --coverage",
-    "prepare": "husky install"
-  },
+"scripts": {
+  "build": "tsc",
+  "start": "node dist/index.js",
+  "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+  "lint": "eslint . --ext .ts",
+  "format": "prettier --write \"src/**/*.ts\"",
+  "test": "jest",
+  "test:coverage": "jest --coverage",
+  "prepare": "husky install"
+},
   "keywords": [
     "api",
     "express",
