@@ -1,7 +1,5 @@
 # Similar Products API
 
-[![CI](https://github.com/LuisAlejandroCortesGalan/inditex-node-test/actions/workflows/ci.yml/badge.svg)](https://github.com/LuisAlejandroCortesGalan/inditex-node-test/actions/workflows/ci.yml)
-
 A high-performance, resilient microservice for retrieving similar products, built with Node.js, TypeScript, and Express.
 
 ## 🚀 Quick Start with Docker (Recommended)
