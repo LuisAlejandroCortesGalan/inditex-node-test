@@ -215,6 +215,32 @@ Example response:
 ]
 ```
 
+## 🧱 Estructura del Proyecto
+
+inditex-node-test/
+├── src/
+│   ├── api/                    # Cliente HTTP para APIs externas (axios)
+│   │   └── apiClient.ts
+│   ├── config/                 # Configuración general y variables
+│   │   └── config.ts
+│   ├── controllers/           # Controladores (capa HTTP)
+│   │   └── product.controller.ts
+│   ├── routes/                # Definición de rutas
+│   │   └── product.routes.ts
+│   ├── services/              # Lógica de negocio y manejo de datos
+│   │   └── product.service.ts
+│   ├── types/                 # Tipado personalizado
+│   │   └── product.ts
+│   └── app.ts                 # Configuración y arranque de Express
+├── .env.example               # Variables de entorno de ejemplo
+├── Dockerfile                 # Imagen base para producción
+├── docker-compose.yml         # Orquestación de contenedores para entorno local
+├── jest.config.js             # Configuración de pruebas
+├── tsconfig.json              # Configuración de TypeScript
+├── package.json               # Dependencias y scripts
+└── README.md                  # Documentación del proyecto
+
+
 ## Resilience Features
 
 This API implements several resilience patterns to ensure robust operation:
