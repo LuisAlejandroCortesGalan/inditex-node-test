@@ -11,6 +11,8 @@ interface Config {
   cacheTtl: number;
   logLevel: string;
   maxConcurrentRequests: number; 
+  circuitBreakerFailureThreshold?: number; 
+  circuitBreakerResetTimeout?: number;   
 }
 
 const config: Config = {

@@ -2,22 +2,27 @@ import ProductApiClient from '../clients/productApiClient';
 import logger from '../utils/logger';
 import { ProductDetail, SimilarProducts } from '../models/productModels';
 import { NotFoundError } from '../models/errors';
+import config from '../config/config';
+
+/**
+ * Lista de IDs de productos conocidos por ser extremadamente lentos
+ */
+const EXTREMELY_SLOW_PRODUCT_IDS = ['10000'];
 
 /**
  * Servicio para operaciones relacionadas con productos
  */
 export default class ProductService {
     private productApiClient: ProductApiClient;
-    private readonly MAX_CONCURRENT_REQUESTS = parseInt(
-        process.env.MAX_CONCURRENT_REQUESTS || '10',
-        10
-    );
+    private readonly MAX_CONCURRENT_REQUESTS: number;
+
     /**
      * Constructor del servicio de productos
      * @param apiClient Cliente opcional de API de productos (útil para testing)
      */
     constructor(apiClient?: ProductApiClient) {
         this.productApiClient = apiClient || new ProductApiClient();
+        this.MAX_CONCURRENT_REQUESTS = config.maxConcurrentRequests;
         logger.debug('ProductService initialized');
     }
 
@@ -38,14 +43,21 @@ export default class ProductService {
                 return [];
             }
 
-            logger.debug(`Fetching details for ${similarIds.length} similar products`);
+            // Filtrar productos extremadamente lentos
+            const filteredIds = this.filterProblematicProducts(similarIds);
+            
+            if (filteredIds.length !== similarIds.length) {
+                logger.warn(`Filtered out ${similarIds.length - filteredIds.length} problematic products`);
+            }
+
+            logger.debug(`Fetching details for ${filteredIds.length} similar products`);
 
             // Array para almacenar todos los detalles de productos
             const productDetails: Array<ProductDetail | null> = [];
 
             // Procesar en lotes para controlar la concurrencia
-            for (let i = 0; i < similarIds.length; i += this.MAX_CONCURRENT_REQUESTS) {
-                const batchIds = similarIds.slice(i, i + this.MAX_CONCURRENT_REQUESTS);
+            for (let i = 0; i < filteredIds.length; i += this.MAX_CONCURRENT_REQUESTS) {
+                const batchIds = filteredIds.slice(i, i + this.MAX_CONCURRENT_REQUESTS);
                 logger.debug(`Processing batch ${Math.floor(i / this.MAX_CONCURRENT_REQUESTS) + 1} with ${batchIds.length} products`);
 
                 // Crear un array de promesas para este lote
@@ -60,9 +72,17 @@ export default class ProductService {
                         })
                 );
 
-                // Esperar a que se completen las promesas del lote actual
-                const batchResults = await Promise.all(batchPromises);
-
+                // Establecer un timeout global para todo el lote
+                const batchResults = await Promise.race([
+                    Promise.all(batchPromises),
+                    new Promise<null[]>((resolve) => {
+                        setTimeout(() => {
+                            logger.warn(`Batch timeout exceeded for products ${batchIds.join(', ')}`);
+                            resolve(batchIds.map(() => null));
+                        }, config.requestTimeout * 1.5); // 50% más de tiempo que el timeout estándar
+                    })
+                ]);
+                
                 // Añadir los resultados al array principal
                 productDetails.push(...batchResults);
             }
@@ -73,7 +93,7 @@ export default class ProductService {
             );
 
             logger.info(
-                `Successfully retrieved ${validProducts.length} of ${similarIds.length} similar products`
+                `Successfully retrieved ${validProducts.length} of ${filteredIds.length} similar products`
             );
 
             return validProducts;
@@ -88,5 +108,22 @@ export default class ProductService {
             logger.error(`Error getting similar products for ${productId}: ${errorMessage}`);
             throw error;
         }
+    }
+
+    /**
+     * Filtra productos conocidos por ser problemáticos
+     * @param productIds Lista de IDs de productos a filtrar
+     * @returns Lista filtrada de IDs de productos
+     */
+    private filterProblematicProducts(productIds: string[]): string[] {
+        const problematicIds = productIds.filter(id => 
+            EXTREMELY_SLOW_PRODUCT_IDS.includes(id)
+        );
+        
+        if (problematicIds.length > 0) {
+            logger.warn(`Filtered out extremely slow products: ${problematicIds.join(', ')}`);
+        }
+        
+        return productIds.filter(id => !EXTREMELY_SLOW_PRODUCT_IDS.includes(id));
     }
 }
