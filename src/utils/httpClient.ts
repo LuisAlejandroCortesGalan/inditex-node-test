@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import type { AxiosResponse } from 'axios';
+import http from 'http';
+import https from 'https';
 import config from '../config/config';
 import logger from './logger';
 import { ExternalApiError, TimeoutError } from '../models/errors';
@@ -34,12 +36,32 @@ export default class HttpClient {
      * @param timeout Tiempo máximo de espera en ms
      */
     constructor(baseURL: string, timeout = config.requestTimeout) {
+        // Crear agentes HTTP con pooling optimizado
+        const httpAgent = new http.Agent({
+            keepAlive: true,
+            keepAliveMsecs: 1000,
+            maxSockets: 50,
+            timeout: timeout
+        });
+        
+        const httpsAgent = new https.Agent({
+            keepAlive: true,
+            keepAliveMsecs: 1000,
+            maxSockets: 50,
+            timeout: timeout
+        });
+        
         this.instance = axios.create({
             baseURL,
             timeout,
+            httpAgent,
+            httpsAgent,
             headers: {
                 'Content-Type': 'application/json',
             },
+            // Optimizaciones adicionales
+            maxRedirects: 5,
+            decompress: true, // Soporte para respuestas comprimidas
         });
         
         this.cache = new Map();
