@@ -8,7 +8,10 @@ import { NotFoundError } from '../models/errors';
  */
 export default class ProductService {
     private productApiClient: ProductApiClient;
-
+    private readonly MAX_CONCURRENT_REQUESTS = parseInt(
+        process.env.MAX_CONCURRENT_REQUESTS || '10',
+        10
+    );
     /**
      * Constructor del servicio de productos
      * @param apiClient Cliente opcional de API de productos (útil para testing)
@@ -37,19 +40,32 @@ export default class ProductService {
 
             logger.debug(`Fetching details for ${similarIds.length} similar products`);
 
-            // Obtener detalles de productos en paralelo
-            const productDetailsPromises = similarIds.map(id =>
-                this.productApiClient.getProductDetail(id)
-                    .catch(error => {
-                        // Manejar error de forma segura
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        logger.warn(`Failed to get details for product ${id}: ${errorMessage}`);
-                        // Retornar null para productos que no se pudieron obtener
-                        return null;
-                    })
-            );
+            // Array para almacenar todos los detalles de productos
+            const productDetails: Array<ProductDetail | null> = [];
 
-            const productDetails = await Promise.all(productDetailsPromises);
+            // Procesar en lotes para controlar la concurrencia
+            for (let i = 0; i < similarIds.length; i += this.MAX_CONCURRENT_REQUESTS) {
+                const batchIds = similarIds.slice(i, i + this.MAX_CONCURRENT_REQUESTS);
+                logger.debug(`Processing batch ${Math.floor(i / this.MAX_CONCURRENT_REQUESTS) + 1} with ${batchIds.length} products`);
+
+                // Crear un array de promesas para este lote
+                const batchPromises = batchIds.map(id =>
+                    this.productApiClient.getProductDetail(id)
+                        .catch(error => {
+                            // Manejar error de forma segura
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            logger.warn(`Failed to get details for product ${id}: ${errorMessage}`);
+                            // Retornar null para productos que no se pudieron obtener
+                            return null;
+                        })
+                );
+
+                // Esperar a que se completen las promesas del lote actual
+                const batchResults = await Promise.all(batchPromises);
+
+                // Añadir los resultados al array principal
+                productDetails.push(...batchResults);
+            }
 
             // Filtrar productos nulos (los que fallaron)
             const validProducts = productDetails.filter(
