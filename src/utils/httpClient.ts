@@ -13,11 +13,20 @@ interface CacheEntry<T> {
 }
 
 /**
+ * Configuración para la estrategia de caché
+ */
+interface CacheConfig {
+    defaultTtl: number;
+    popularResourceMultiplier: number;
+}
+
+/**
  * Cliente HTTP resiliente con capacidades de caché y reintentos
  */
 export default class HttpClient {
     private instance: AxiosInstance;
     private cache: Map<string, CacheEntry<unknown>>;
+    private cacheConfig: CacheConfig;
 
     /**
      * Constructor para el cliente HTTP
@@ -32,7 +41,12 @@ export default class HttpClient {
                 'Content-Type': 'application/json',
             },
         });
+        
         this.cache = new Map();
+        this.cacheConfig = {
+            defaultTtl: config.cacheTtl,
+            popularResourceMultiplier: 3 // Los recursos populares duran 3 veces más en caché
+        };
 
         // Configurar interceptores para logging
         this.setupInterceptors();
@@ -110,7 +124,7 @@ export default class HttpClient {
     }
 
     /**
-     * Obtiene datos de la caché si son válidos
+     * Obtiene datos de la caché si son válidos, con TTL variable según popularidad
      * @param key Clave de caché
      */
     private getFromCache<T>(key: string): T | null {
@@ -121,9 +135,19 @@ export default class HttpClient {
         }
 
         const now = Date.now();
-        if (now - cached.timestamp > config.cacheTtl) {
+        
+        // Determinar si es un recurso popular (productos frecuentes o rutas de similarids)
+        const isPopularResource = /\/product\/([1-9]|10)(\/|$)/.test(key) || 
+                                 key.includes('/similarids');
+        
+        const effectiveTtl = isPopularResource 
+            ? this.cacheConfig.defaultTtl * this.cacheConfig.popularResourceMultiplier
+            : this.cacheConfig.defaultTtl;
+            
+        if (now - cached.timestamp > effectiveTtl) {
             // Cache expired
             this.cache.delete(key);
+            logger.debug(`Cache expired for ${key}`);
             return null;
         }
 
@@ -140,6 +164,7 @@ export default class HttpClient {
             data,
             timestamp: Date.now(),
         });
+        logger.debug(`Added to cache: ${key}`);
     }
 
     /**
@@ -217,5 +242,26 @@ export default class HttpClient {
     clearCache(): void {
         this.cache.clear();
         logger.debug('HTTP client cache cleared');
+    }
+
+    /**
+     * Invalida entradas de caché que coincidan con un patrón
+     * @param pattern Patrón para hacer coincidir con las claves de caché
+     */
+    invalidateCache(pattern?: string): void {
+        if (!pattern) {
+            this.clearCache();
+            return;
+        }
+        
+        let count = 0;
+        // Invalidar solo las entradas que coincidan con el patrón
+        for (const key of this.cache.keys()) {
+            if (key.includes(pattern)) {
+                this.cache.delete(key);
+                count++;
+            }
+        }
+        logger.debug(`Invalidated ${count} cache entries matching pattern: ${pattern}`);
     }
 }
