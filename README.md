@@ -10,7 +10,7 @@ This application is designed as a microservice that works alongside a mock API s
 # 1. First, clone and run the mock API service
 git clone https://github.com/dalogax/backendDevTest
 cd backendDevTest
-docker-compose up -d
+docker-compose up -d simulado influxdb grafana
 
 # 2. Clone and run this service
 git clone https://github.com/LuisAlejandroCortesGalan/inditex-node-test
