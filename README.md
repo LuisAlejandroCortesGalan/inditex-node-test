@@ -66,6 +66,10 @@ This project follows a microservices architecture with Docker containerization:
 ## 📐 Request Flow Architecture
 
 
+```
+## 📐 Request Flow Architecture
+
+
 Solicitud HTTP
     │
     ▼
@@ -109,7 +113,7 @@ Solicitud HTTP
 ┌─────────────────┐    │
 │  Cache Manager  │────┘
 └─────────────────┘
-
+```
 ## 🐳 Docker Configuration
 
 - Multi-stage build for optimized image size
