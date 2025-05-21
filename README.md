@@ -26,6 +26,9 @@ curl http://localhost:5000/health
 
 # Retrieve similar products
 curl http://localhost:5000/product/1/similar
+
+# View API documentation
+open http://localhost:5000/api-docs
 ```
 
 ## 🔍 Project Overview
@@ -35,6 +38,7 @@ This service implements the following API contract:
 - `GET /product/{productId}/similar`: Returns an array of similar products for a given product ID.
 
 The service:
+
 1. Receives a request for a product's similar items
 2. Fetches the list of similar product IDs from an external API
 3. For each ID, retrieves the detailed product information
@@ -53,99 +57,158 @@ This project follows a microservices architecture with Docker containerization:
 └─────────────────┘                └────────────────────┘                └─────────────────┘
                                           │
                                           │
-                                          │
                                           ▼
                                    ┌─────────────────┐
-                                   │                 │
                                    │   In-memory     │
-                                   │   Cache         │
-                                   │                 │
+                                   │     Cache       │
                                    └─────────────────┘
 ```
+## 📐 Request Flow Architecture
 
-### Docker Configuration
 
-The application is fully containerized using Docker:
+Solicitud HTTP
+    │
+    ▼
+┌─────────────────┐
+│   Middleware    │
+│  • rateLimiter  │
+│  • requestLogger│
+└────────┬────────┘
+    │
+    ▼
+┌─────────────────┐
+│     Routes      │
+└────────┬────────┘
+    │
+    ▼
+┌─────────────────┐
+│   Controllers   │
+└────────┬────────┘
+    │
+    ▼
+┌─────────────────┐
+│    Services     │
+└────────┬────────┘
+    │
+    ▼
+┌─────────────────┐
+│    Clients      │◄───┐
+└────────┬────────┘    │
+    │                  │
+    ▼                  │
+┌─────────────────┐    │
+│ Circuit Breaker │    │
+└────────┬────────┘    │
+    │                  │
+    ▼                  │
+┌─────────────────┐    │
+│   HTTP Client   │    │
+└────────┬────────┘    │
+    │                  │
+    ▼                  │
+┌─────────────────┐    │
+│  Cache Manager  │────┘
+└─────────────────┘
+
+## 🐳 Docker Configuration
+
 - Multi-stage build for optimized image size
 - Proper container networking with external services
 - Health checks for reliability
 - Environment variable configuration
 
-### Code Organization
-
-The project follows clean architecture principles with clear separation of concerns:
+## 🗂️ Code Organization
 
 ```
 src/
-├── types/            # TypeScript type definitions
-├── models/           # Data structures and interfaces
-├── services/         # Business logic implementation
-├── controllers/      # Request handling and response formatting
-├── routes/           # API endpoint definitions
-├── clients/          # External API communication
-├── utils/            # Shared utilities and helpers
-├── middleware/       # Request processing and error handling
-├── app.ts            # Express application setup
-└── index.ts          # Application entry point
+├── types/                    # TypeScript type definitions
+│   └── express.d.ts          # Extended Express types for request/response
+│
+├── models/                   # Data structures and interfaces
+│   ├── productModels.ts      # Product data models and interfaces
+│   ├── productModels.test.ts # Unit tests for product models
+│   └── errors.ts             # Custom error classes for better error handling
+│
+├── services/                 # Business logic implementation
+│   ├── productService.ts     # Core business logic for products
+│   └── productService.test.ts# Unit tests for product service
+│
+├── controllers/              # Request handling and response formatting
+│   └── productController.ts  # Controller for product-related requests
+│
+├── routes/                   # API endpoint definitions
+│   ├── productRoutes.ts      # Routes for product API endpoints
+│   └── productRoutes.test.ts # Integration tests for product routes
+│
+├── clients/                  # External API communication
+│   ├── productApiClient.ts   # Client for external product API
+│   └── productApiClient.test.ts # Tests for product API client
+│
+├── utils/                    # Shared utilities and helpers
+│   ├── swagger.ts            # Swagger/OpenAPI configuration
+│   ├── swagger.test.ts       # Tests for API documentation
+│   ├── logger.ts             # Centralized logging configuration
+│   ├── httpClient.ts         # Base HTTP client with resilience features
+│   ├── httpClient.test.ts    # Tests for HTTP client resilience
+│   ├── circuitBreaker.ts     # Circuit breaker implementation
+│   └── asyncHandler.ts       # Async request handler utility
+│
+├── middleware/               # Request processing and error handling
+│   ├── rateLimiter.ts        # Rate limiting for API protection
+│   ├── rateLimiter.test.ts   # Tests for rate limiting
+│   ├── requestLogger.ts      # HTTP request/response logging
+│   └── errorHandler.ts       # Global error handling middleware
+│
+├── app.ts                    # Express application setup
+├── app.test.ts               # Integration tests for the application
+└── index.ts                  # Application entry point
 ```
 
 ## 🛡️ Performance & Resilience Features
 
-This API implements advanced patterns to ensure high performance and reliability under heavy load:
-
 ### High-Performance Caching
-- **Adaptive TTL**: Popular resources stay in cache 3x longer
-- **Pattern-based Invalidation**: Selectively clear cache entries
-- **In-memory Storage**: Fast access to frequently requested data
+- Adaptive TTL
+- Pattern-based Invalidation
+- In-memory Storage
 
 ### Intelligent Concurrency Control
-- **Batch Processing**: Processes requests in controlled batches
-- **Configurable Concurrency Limits**: Adjust via environment variables
-- **Resource Protection**: Prevents overwhelming the system or dependencies
+- Batch Processing
+- Configurable Concurrency Limits
+- Resource Protection
 
 ### Network Optimization
-- **Connection Pooling**: Reuses HTTP connections for better performance
-- **Keep-Alive**: Maintains persistent connections to external services
-- **Optimized HTTP Agents**: Fine-tuned for throughput and stability
+- Connection Pooling
+- Keep-Alive
+- Optimized HTTP Agents
 
 ### Advanced Resilience Patterns
-- **Circuit Breaker**: Automatically isolates failing dependencies
-- **Retry with Exponential Backoff**: Intelligently retries failed requests
-- **Graceful Degradation**: Returns partial results when some products fail
-- **Timeout Management**: Prevents slow requests from blocking resources
+- Circuit Breaker
+- Retry with Exponential Backoff
+- Graceful Degradation
+- Timeout Management
 
 ### Smart Error Handling
-- **Typed Errors**: Specialized error types for different failure scenarios
-- **Consistent Response Format**: Well-structured error responses
-- **Comprehensive Logging**: Detailed insights for troubleshooting
+- Typed Errors
+- Consistent Response Format
+- Comprehensive Logging
 
-### Performance Measurement
-- **Load Testing Integration**: Verified performance under 200+ concurrent users
-- **Response Time Optimization**: Sub-100ms response times for cached requests
+### Security Measures
+- Rate Limiting (express-rate-limit)
+- Helmet for security headers
 
 ## 📝 API Documentation
 
-### Get Similar Products
+Interactive docs available at:  
+👉 **http://localhost:5000/api-docs**
 
-Returns an array of products that are similar to the specified product.
+- `/api-docs` - Swagger UI
+- `/api-docs.json` - Raw OpenAPI JSON
+
+### Example
 
 ```
 GET /product/{productId}/similar
 ```
-
-#### Parameters
-
-| Name      | Type   | In   | Description                                    |
-| --------- | ------ | ---- | ---------------------------------------------- |
-| productId | string | path | ID of the product to find similar products for |
-
-#### Responses
-
-| Status | Description                                                |
-| ------ | ---------------------------------------------------------- |
-| 200    | Successful operation. Returns an array of product details. |
-| 404    | Product not found                                          |
-| 500    | Internal server error                                      |
 
 Example response:
 
@@ -168,152 +231,56 @@ Example response:
 
 ## ⚙️ Configuration
 
-The application is highly configurable through environment variables:
-
-| Variable                        | Description                      | Default            |
-| ------------------------------- | -------------------------------- | ------------------ |
-| PORT                            | Server port                      | 5000               |
-| EXTERNAL_API_BASE_URL           | Base URL for the external API    | http://simulado:80 |
-| REQUEST_TIMEOUT                 | HTTP request timeout in ms       | 3000               |
-| MAX_RETRIES                     | Maximum number of retry attempts | 3                  |
-| RETRY_DELAY                     | Delay between retries in ms      | 300                |
-| CACHE_TTL                       | Cache time-to-live in ms         | 60000              |
-| MAX_CONCURRENT_REQUESTS         | Maximum parallel requests        | 10                 |
-| CIRCUIT_BREAKER_FAILURE_THRESHOLD | Failures before circuit opens  | 5                  |
-| CIRCUIT_BREAKER_RESET_TIMEOUT   | Time before retry after circuit opens (ms) | 30000    |
+| Variable                          | Description                                | Default            |
+| --------------------------------- | ------------------------------------------ | ------------------ |
+| PORT                              | Server port                                | 5000               |
+| EXTERNAL_API_BASE_URL             | Base URL for the external API              | http://simulado:80 |
+| REQUEST_TIMEOUT                   | HTTP request timeout in ms                 | 3000               |
+| MAX_RETRIES                       | Maximum number of retry attempts           | 3                  |
+| RETRY_DELAY                       | Delay between retries in ms                | 300                |
+| CACHE_TTL                         | Cache time-to-live in ms                   | 60000              |
+| MAX_CONCURRENT_REQUESTS           | Maximum parallel requests                  | 10                 |
+| CIRCUIT_BREAKER_FAILURE_THRESHOLD | Failures before circuit opens              | 5                  |
+| CIRCUIT_BREAKER_RESET_TIMEOUT     | Time before retry after circuit opens (ms) | 30000              |
+| RATE_LIMIT_WINDOW_MS              | Rate limit window in ms                    | 900000             |
+| RATE_LIMIT_MAX_REQUESTS           | Max requests per window                    | 100                |
 
 ## 📊 Performance Results
 
-Performance testing with k6 under various load scenarios shows:
+- **Throughput**: 200+ requests/sec under load
+- **Response Time**: Avg 75ms
+- **Resilience**: 99.9% success with failing dependencies
+- **Resource Usage**: Efficient
 
-- **Throughput**: Handles 200+ requests/second under load
-- **Response Time**: Average of 75ms under normal conditions
-- **Resilience**: 99.9% success rate even with failing dependencies
-- **Resource Usage**: Efficient CPU and memory utilization
+## ✅ New Implemented Enhancements
+
+- **OpenAPI/Swagger Documentation**  
+  Interactive API documentation integrated via `swagger-jsdoc` and `swagger-ui-express`.  
+  Tests validate that the contract is properly defined.
+
+- **Advanced Rate Limiting & Security**  
+  Implemented rate limiting with `express-rate-limit` and enhanced protection via `helmet` headers.
+
+- **API Contract Tests with Swagger**  
+  Ensures consistency and easy review via `/api-docs`.
 
 ## 🔮 Future Improvements
 
-While the current implementation is robust and production-ready, here are some architectural considerations and future improvements that could be implemented:
+While the current implementation is production-ready, the following enhancements could further improve maintainability, observability, and scalability:
 
-### 1. Code Refactoring for Enhanced Maintainability
+- **Code Refactoring**  
+  Split `HttpClient` into smaller classes like `ConnectionManager` and `CacheManager` for better separation of concerns.
 
-The current `HttpClient` class, while functional and well-organized, could benefit from further refactoring:
+- **Advanced Observability**  
+  Metrics collection using `prom-client` (e.g., counters, histograms), exposed via `/metrics` for Prometheus and Grafana.
 
-```typescript
-// Break down into smaller, more focused classes
-class HttpClient implements IHttpClient {
-  constructor(private connectionManager: IConnectionManager, 
-              private cacheManager: ICacheManager) {}
-  // Core functionality only
-}
+- **Enhanced Dependency Injection**  
+  Use of `inversify` to enable scalable and testable service composition.
 
-class ConnectionManager implements IConnectionManager {
-  // Connection pooling and management
-}
-
-class CacheManager implements ICacheManager {
-  // Caching strategies and invalidation
-}
-```
-
-This approach would further adhere to the Single Responsibility Principle and make the codebase even more maintainable.
-
-### 2. Advanced Observability
-
-Adding a comprehensive metrics and monitoring system:
-
-```typescript
-// Prometheus metrics integration
-import { Registry, Counter, Histogram } from 'prom-client';
-
-// Request metrics
-const httpRequestsTotal = new Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'endpoint', 'status']
-});
-
-// Expose metrics endpoint
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-```
-
-### 3. Enhanced API Documentation
-
-Integration of OpenAPI/Swagger for interactive API documentation:
-
-```typescript
-// OpenAPI/Swagger integration
-import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Similar Products API',
-      version: '1.0.0'
-    },
-  },
-  apis: ['./src/routes/*.ts'],
-};
-
-app.use('/api-docs', swaggerUi.serve, 
-                    swaggerUi.setup(swaggerJsdoc(swaggerOptions)));
-```
-
-### 4. Enhanced Dependency Injection
-
-A more formal dependency injection system for better testability:
-
-```typescript
-// Using an Inversion of Control (IoC) container
-import { Container, injectable, inject } from 'inversify';
-import 'reflect-metadata';
-
-@injectable()
-class ProductService {
-  constructor(
-    @inject(TYPES.ProductRepository) private repository: IProductRepository,
-    @inject(TYPES.CacheService) private cache: ICacheService
-  ) {}
-  
-  // Service methods
-}
-```
-
-### 5. Advanced Rate Limiting and Security
-
-More sophisticated rate limiting and security features:
-
-```typescript
-// Rate limiting configuration
-import rateLimit from 'express-rate-limit';
-
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  message: 'Too many requests from this IP, please try again later'
-}));
-
-// Additional security headers
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"]
-    }
-  }
-}));
-```
-
-These potential improvements demonstrate an understanding of advanced architectural concepts and a forward-thinking approach to software development, while acknowledging that the current implementation already meets the requirements with high quality.
+- **Extended Monitoring Stack**  
+  Full observability with Grafana dashboards and custom alerts.
 
 ## 🧪 Local Development (Alternative to Docker)
-
-If you prefer to run the application without Docker for development:
 
 ```bash
 # Clone the repository
