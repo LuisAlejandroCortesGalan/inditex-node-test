@@ -21,7 +21,7 @@ describe('Product Models', () => {
   describe('SimilarProductIds', () => {
     it('should create a valid array of product IDs', () => {
       const similarIds: SimilarProductIds = ['1', '2', '3'];
-      
+
       expect(Array.isArray(similarIds)).toBe(true);
       expect(similarIds.length).toBe(3);
       expect(similarIds[0]).toBe('1');
@@ -44,7 +44,7 @@ describe('Product Models', () => {
           availability: false,
         },
       ];
-      
+
       expect(Array.isArray(products)).toBe(true);
       expect(products.length).toBe(2);
       expect(products[0].name).toBe('Product 1');
@@ -56,7 +56,7 @@ describe('Product Models', () => {
 describe('Error Models', () => {
   it('should create AppError with correct properties', () => {
     const error = new AppError('General error', 500);
-    
+
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe('General error');
     expect(error.statusCode).toBe(500);
@@ -65,7 +65,7 @@ describe('Error Models', () => {
 
   it('should create NotFoundError with status code 404', () => {
     const error = new NotFoundError('Resource not found');
-    
+
     expect(error).toBeInstanceOf(AppError);
     expect(error.message).toBe('Resource not found');
     expect(error.statusCode).toBe(404);
@@ -73,9 +73,14 @@ describe('Error Models', () => {
 
   it('should create ExternalApiError with default status code 500', () => {
     const error = new ExternalApiError('External API failed');
-    
+
     expect(error).toBeInstanceOf(AppError);
     expect(error.message).toBe('External API failed');
     expect(error.statusCode).toBe(500);
+  });
+  afterAll(() => {
+    jest.restoreAllMocks();
+
+    jest.useRealTimers();
   });
 });

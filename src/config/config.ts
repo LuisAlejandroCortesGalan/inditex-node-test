@@ -10,9 +10,9 @@ interface Config {
   retryDelay: number;
   cacheTtl: number;
   logLevel: string;
-  maxConcurrentRequests: number; 
-  circuitBreakerFailureThreshold?: number; 
-  circuitBreakerResetTimeout?: number;   
+  maxConcurrentRequests: number;
+  circuitBreakerFailureThreshold?: number;
+  circuitBreakerResetTimeout?: number;
 }
 
 const config: Config = {
@@ -23,7 +23,7 @@ const config: Config = {
   retryDelay: parseInt(process.env.RETRY_DELAY || '300', 10),
   cacheTtl: parseInt(process.env.CACHE_TTL || '60000', 10),
   logLevel: process.env.LOG_LEVEL || 'info',
-  maxConcurrentRequests: parseInt(process.env.MAX_CONCURRENT_REQUESTS || '10', 10), 
+  maxConcurrentRequests: parseInt(process.env.MAX_CONCURRENT_REQUESTS || '10', 10),
 };
 
 export default config;

@@ -5,10 +5,11 @@ import morgan from 'morgan';
 import productRoutes from './routes/productRoutes';
 import { requestLogger, requestIdMiddleware } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { setupSwagger } from './utils/swagger';
+import { apiLimiter, productLimiter } from './middleware/rateLimiter';
 
 const app: Application = express();
 
-// Middlewares
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
@@ -16,10 +17,10 @@ app.use(morgan('dev'));
 app.use(requestIdMiddleware);
 app.use(requestLogger);
 
-// Rutas
-app.use('/product', productRoutes);
+app.use(apiLimiter);
 
-// Ruta básica de health check
+setupSwagger(app);
+
 app.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'success',
@@ -27,10 +28,9 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Manejador de rutas no encontradas
-app.use('*', notFoundHandler);
+app.use('/product', productLimiter, productRoutes);
 
-// Manejador de errores
+app.use('*', notFoundHandler);
 app.use(errorHandler);
 
 export default app;
